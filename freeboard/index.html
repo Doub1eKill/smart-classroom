@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Classroom · ST806</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏫</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231c5cab' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 12c-3-2.5-3.5-7.5 0-8 4 0 3.5 5 0 8'/><path d='M12 12c2.5 3 7.5 3.5 8 0 0-4-5-3.5-8 0'/><path d='M12 12c3 2.5 3.5 7.5 0 8-4 0-3.5-5 0-8'/><path d='M12 12c-2.5-3-7.5-3.5-8 0 0 4 5 3.5 8 0'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -53,6 +54,7 @@
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--page); color: var(--ink);
          font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.5; }
+  .lucide { width: 1em; height: 1em; flex: none; stroke-width: 2; vertical-align: -0.15em; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
 
   /* ---------- Top bar ---------- */
@@ -60,7 +62,7 @@
   .topbar .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
   .brand .logo { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
-                 background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; font-size: 1.1rem; }
+                 background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; font-size: 1.15rem; }
   .brand small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; line-height: 1.2; }
   .spacer { flex: 1; }
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px;
@@ -70,7 +72,7 @@
   .pulse.off { background: var(--crit); }
   @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(12,163,12,0); } 100% { box-shadow: 0 0 0 0 rgba(12,163,12,0); } }
   .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
-              color: var(--ink); cursor: pointer; font-size: 1rem; }
+              color: var(--ink); cursor: pointer; font-size: 1.05rem; display: grid; place-items: center; }
   .icon-btn:hover { background: var(--surface-2); }
 
   /* ---------- Hero ---------- */
@@ -84,6 +86,7 @@
   .hero .summary { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
                    background: rgba(255,255,255,.16); font-weight: 600; margin-top: 6px; }
   .hero .meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 18px; font-size: .88rem; opacity: .9; }
+  .hero .meta span { display: inline-flex; align-items: center; gap: 6px; }
   .ring { position: relative; width: 132px; height: 132px; }
   .ring svg { transform: rotate(-90deg); }
   .ring .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
@@ -102,8 +105,8 @@
   .tile { padding: 16px 18px 18px; position: relative; transition: transform .15s; }
   .tile:hover { transform: translateY(-2px); }
   .tile .top { display: flex; align-items: center; gap: 10px; }
-  .tile .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 1.1rem;
-               background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .tile .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 1.15rem;
+               color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
   .tile .name { color: var(--ink-2); font-size: .88rem; font-weight: 500; }
   .tile .value { margin-top: 12px; font-size: 2.1rem; font-weight: 700; line-height: 1; letter-spacing: -.01em; }
   .tile .unit { font-size: .9rem; color: var(--muted); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
@@ -118,7 +121,9 @@
   .gauge-scale { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
   .tile.crit { border-color: color-mix(in srgb, var(--crit) 45%, transparent); }
 
-  .fan .blade { display: inline-block; font-size: 2.1rem; line-height: 1; }
+  .chip .lucide { width: .95em; height: .95em; stroke-width: 2.5; }
+  .fan .blade { display: inline-grid; font-size: 2rem; line-height: 1; color: var(--muted); }
+  .fan.on .blade { color: var(--accent); }
   .fan.on .blade { animation: spin .9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .fan .value { display: flex; align-items: center; gap: 12px; }
@@ -128,10 +133,10 @@
   .alerts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
   .alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px;
            border: 1px solid var(--border); background: var(--surface); }
-  .alert .badge { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; font-size: 1.05rem; }
-  .alert.crit .badge { background: var(--crit-bg); }
-  .alert.good .badge { background: var(--good-bg); }
-  .alert.info .badge { background: color-mix(in srgb, var(--c-hum) 14%, transparent); }
+  .alert .badge { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; font-size: 1.1rem; }
+  .alert.crit .badge { background: var(--crit-bg); color: var(--crit-ink); }
+  .alert.good .badge { background: var(--good-bg); color: var(--good-ink); }
+  .alert.info .badge { background: color-mix(in srgb, var(--c-hum) 14%, transparent); color: var(--c-hum); }
   .alert b { display: block; font-size: .92rem; }
   .alert span { font-size: .8rem; color: var(--ink-2); }
 
@@ -142,7 +147,8 @@
   .charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
   .chart-card { padding: 16px 16px 10px; }
   .chart-card header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-  .chart-card header .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); align-self: center; }
+  .chart-card header .dot { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; align-self: center;
+                            color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); font-size: .9rem; }
   .chart-card header b { font-size: .92rem; }
   .chart-card header .stat { margin-left: auto; font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .chart-box { height: 170px; position: relative; }
@@ -183,10 +189,10 @@
 
 <div class="topbar">
   <div class="wrap">
-    <div class="brand"><div class="logo">🏫</div><div>Smart Classroom<small>Monitoring System · iot-118</small></div></div>
+    <div class="brand"><div class="logo"><i data-lucide="school"></i></div><div>Smart Classroom<small>Monitoring System · iot-118</small></div></div>
     <div class="spacer"></div>
     <span class="pill"><span id="pulse" class="pulse"></span><span id="conn">กำลังเชื่อมต่อ…</span></span>
-    <button class="icon-btn" id="themeBtn" title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่าง/มืด">🌓</button>
+    <button class="icon-btn" id="themeBtn" title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่าง/มืด"></button>
   </div>
 </div>
 
@@ -195,11 +201,11 @@
     <div>
       <div class="eyebrow">ห้องเรียน</div>
       <h1 id="room">ST806</h1>
-      <div class="summary" id="summary">⏳ รอข้อมูลจากเซ็นเซอร์</div>
+      <div class="summary" id="summary"><i data-lucide="loader"></i> รอข้อมูลจากเซ็นเซอร์</div>
       <div class="meta">
-        <span>🕒 อัปเดตล่าสุด <b id="updated">–</b></span>
-        <span>📡 ESP32 + ESPHome → Firebase</span>
-        <span>🔁 ส่งข้อมูลทุก 10 วินาที</span>
+        <span><i data-lucide="clock"></i> อัปเดตล่าสุด <b id="updated">–</b></span>
+        <span><i data-lucide="cpu"></i> ESP32 + ESPHome → Firebase</span>
+        <span><i data-lucide="refresh-cw"></i> ส่งข้อมูลทุก 10 วินาที</span>
       </div>
     </div>
     <div class="ring" title="คุณภาพอากาศ">
@@ -260,19 +266,19 @@ const DEMO = new URLSearchParams(location.search).has("demo");
 
 // เมตริก: min/max = ช่วงของแถบ, warn/crit = เกณฑ์ (dir "hi" = สูงเกินไม่ดี, "lo" = ต่ำเกินไม่ดี)
 const METRICS = [
-  { key: "temperature", name: "อุณหภูมิ",     icon: "🌡️", unit: "°C",  dp: 1, min: 20,  max: 36,   dir: "hi", warn: 28,  crit: 30,   color: "--c-temp" },
-  { key: "humidity",    name: "ความชื้น",     icon: "💧", unit: "%",   dp: 1, min: 0,   max: 100,  dir: "hi", warn: 70,  crit: null, color: "--c-hum" },
-  { key: "light",       name: "แสงสว่าง",     icon: "💡", unit: "lux", dp: 0, min: 0,   max: 1000, dir: "lo", warn: 300, crit: 200,  color: "--c-light" },
-  { key: "co2",         name: "CO₂",          icon: "🫧", unit: "ppm", dp: 0, min: 400, max: 2000, dir: "hi", warn: 800, crit: 1000, color: "--c-co2" },
-  { key: "noise",       name: "ระดับเสียง",   icon: "🔊", unit: "dB",  dp: 0, min: 30,  max: 90,   dir: "hi", warn: 60,  crit: null, color: "--c-noise" },
-  { key: "people",      name: "จำนวนคน",      icon: "👥", unit: "คน",  dp: 0, min: 0,   max: 50,   dir: "hi", warn: 35,  crit: 40,   color: "--c-people" },
-  { key: "air_quality", name: "คุณภาพอากาศ",  icon: "🍃", unit: "%",   dp: 0, min: 0,   max: 100,  dir: "lo", warn: 70,  crit: 50,   color: "--c-aq" },
+  { key: "temperature", name: "อุณหภูมิ",     icon: "thermometer", unit: "°C",  dp: 1, min: 20,  max: 36,   dir: "hi", warn: 28,  crit: 30,   color: "--c-temp" },
+  { key: "humidity",    name: "ความชื้น",     icon: "droplets", unit: "%",   dp: 1, min: 0,   max: 100,  dir: "hi", warn: 70,  crit: null, color: "--c-hum" },
+  { key: "light",       name: "แสงสว่าง",     icon: "sun", unit: "lux", dp: 0, min: 0,   max: 1000, dir: "lo", warn: 300, crit: 200,  color: "--c-light" },
+  { key: "co2",         name: "CO₂",          icon: "cloud-fog", unit: "ppm", dp: 0, min: 400, max: 2000, dir: "hi", warn: 800, crit: 1000, color: "--c-co2" },
+  { key: "noise",       name: "ระดับเสียง",   icon: "volume-2", unit: "dB",  dp: 0, min: 30,  max: 90,   dir: "hi", warn: 60,  crit: null, color: "--c-noise" },
+  { key: "people",      name: "จำนวนคน",      icon: "users", unit: "คน",  dp: 0, min: 0,   max: 50,   dir: "hi", warn: 35,  crit: 40,   color: "--c-people" },
+  { key: "air_quality", name: "คุณภาพอากาศ",  icon: "leaf", unit: "%",   dp: 0, min: 0,   max: 100,  dir: "lo", warn: 70,  crit: 50,   color: "--c-aq" },
 ];
 const ALERTS = [
-  { test: d => d.co2 > 1000,        icon: "⚠️", title: "คุณภาพอากาศไม่ดี",   desc: d => `CO₂ ${d.co2} ppm (เกิน 1000)` },
-  { test: d => d.temperature > 30,  icon: "🔥", title: "อุณหภูมิสูง",         desc: d => `${d.temperature} °C (เกิน 30)` },
-  { test: d => d.people > 40,       icon: "⚠️", title: "ห้องมีคนหนาแน่น",     desc: d => `${d.people} คน (เกิน 40)` },
-  { test: d => d.light < 200,       icon: "💡", title: "แสงสว่างไม่เพียงพอ", desc: d => `${d.light} lux (ต่ำกว่า 200)` },
+  { test: d => d.co2 > 1000,        icon: "triangle-alert", title: "คุณภาพอากาศไม่ดี",   desc: d => `CO₂ ${d.co2} ppm (เกิน 1000)` },
+  { test: d => d.temperature > 30,  icon: "flame", title: "อุณหภูมิสูง",         desc: d => `${d.temperature} °C (เกิน 30)` },
+  { test: d => d.people > 40,       icon: "users", title: "ห้องมีคนหนาแน่น",     desc: d => `${d.people} คน (เกิน 40)` },
+  { test: d => d.light < 200,       icon: "lightbulb-off", title: "แสงสว่างไม่เพียงพอ", desc: d => `${d.light} lux (ต่ำกว่า 200)` },
 ];
 const CHARTS = ["temperature", "co2", "humidity", "light", "noise", "people"];
 
@@ -286,24 +292,27 @@ function level(m, v) {
   const over = (t) => t != null && (m.dir === "hi" ? v > t : v < t);
   return over(m.crit) ? "crit" : over(m.warn) ? "warn" : "good";
 }
-const CHIP = { good: ["✓", "ปกติ"], warn: ["!", "ควรระวัง"], crit: ["▲", "เกินเกณฑ์"] };
+const CHIP = { good: ["check", "ปกติ"], warn: ["circle-alert", "ควรระวัง"], crit: ["triangle-alert", "เกินเกณฑ์"] };
+const ic = name => `<i data-lucide="${name}"></i>`;
+const drawIcons = () => lucide.createIcons();
 
 // ---------- Theme ----------
 const root = document.documentElement;
 try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch {}
+const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+const setThemeIcon = () => { $("themeBtn").innerHTML = ic(isDark() ? "sun" : "moon"); drawIcons(); };
 $("themeBtn").onclick = () => {
-  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-  root.dataset.theme = dark ? "light" : "dark";
+  root.dataset.theme = isDark() ? "light" : "dark";
   try { localStorage.setItem("theme", root.dataset.theme); } catch {}
-  restyleCharts();
+  setThemeIcon(); restyleCharts();
 };
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => restyleCharts());
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { setThemeIcon(); restyleCharts(); });
 
 // ---------- Tiles ----------
 $("tiles").innerHTML = METRICS.map(m => {
   const pos = t => ((t - m.min) / (m.max - m.min) * 100).toFixed(1);
   return `<div class="card tile" id="t-${m.key}" style="--accent: var(${m.color})">
-    <div class="top"><div class="ico">${m.icon}</div><div class="name">${m.name}</div><span class="chip" id="c-${m.key}"></span></div>
+    <div class="top"><div class="ico">${ic(m.icon)}</div><div class="name">${m.name}</div><span class="chip" id="c-${m.key}"></span></div>
     <div class="value"><span id="v-${m.key}">–</span><span class="unit">${m.unit}</span></div>
     <div class="gauge"><div class="fill" id="g-${m.key}" style="width:0"></div>
       ${m.crit != null ? `<div class="tick" style="left:${pos(m.crit)}%" title="เกณฑ์ ${m.crit}"></div>` : ""}</div>
@@ -311,8 +320,8 @@ $("tiles").innerHTML = METRICS.map(m => {
   </div>`;
 }).join("") + `
   <div class="card tile fan" id="t-fan" style="--accent: var(--c-hum)">
-    <div class="top"><div class="ico">🌀</div><div class="name">พัดลมระบายอากาศ</div><span class="chip" id="c-fan"></span></div>
-    <div class="value"><span class="blade">🌀</span><span id="v-fan">–</span></div>
+    <div class="top"><div class="ico">${ic("fan")}</div><div class="name">พัดลมระบายอากาศ</div><span class="chip" id="c-fan"></span></div>
+    <div class="value"><span class="blade">${ic("fan")}</span><span id="v-fan">–</span></div>
     <div class="reason" id="fanReason">เปิดอัตโนมัติเมื่ออุณหภูมิ &gt; 30 °C หรือ CO₂ &gt; 1000 ppm</div>
   </div>`;
 
@@ -324,7 +333,7 @@ function renderLatest(d) {
     $("g-" + m.key).style.width = typeof v === "number" ? Math.max(0, Math.min(100, (v - m.min) / (m.max - m.min) * 100)) + "%" : "0";
     const chip = $("c-" + m.key);
     chip.className = "chip " + (lv || "");
-    chip.innerHTML = lv ? `${CHIP[lv][0]} <span class="txt">${CHIP[lv][1]}</span>` : "";
+    chip.innerHTML = lv ? `${ic(CHIP[lv][0])} <span class="txt">${CHIP[lv][1]}</span>` : "";
     $("t-" + m.key).classList.toggle("crit", lv === "crit");
   }
   // Fan
@@ -332,23 +341,24 @@ function renderLatest(d) {
   $("t-fan").classList.toggle("on", on);
   $("v-fan").textContent = on ? "ON" : "OFF";
   $("c-fan").className = "chip " + (on ? "good" : "");
-  $("c-fan").innerHTML = on ? `● <span class="txt">ทำงาน</span>` : `○ <span class="txt">ปิด</span>`;
+  $("c-fan").innerHTML = `${ic("power")} <span class="txt">${on ? "ทำงาน" : "ปิด"}</span>`;
   const why = [d.temperature > 30 && "อุณหภูมิสูง", d.co2 > 1000 && "CO₂ สูง"].filter(Boolean);
   $("fanReason").textContent = on ? `เปิดอัตโนมัติ เพราะ${why.join(" และ ") || "เงื่อนไขจากบอร์ด"}` : "เปิดอัตโนมัติเมื่ออุณหภูมิ > 30 °C หรือ CO₂ > 1000 ppm";
 
   // Alerts + hero
   const active = ALERTS.filter(a => a.test(d));
-  let html = active.map(a => `<div class="alert crit"><div class="badge">${a.icon}</div><div><b>${a.title}</b><span>${a.desc(d)}</span></div></div>`).join("");
-  if (on) html += `<div class="alert info"><div class="badge">🌀</div><div><b>พัดลมทำงานอัตโนมัติ</b><span>ระบายอากาศเพื่อลดอุณหภูมิและ CO₂</span></div></div>`;
-  if (!active.length) html = `<div class="alert good"><div class="badge">✅</div><div><b>สภาพห้องเรียนปกติ</b><span>ทุกค่าอยู่ในเกณฑ์ที่เหมาะสม</span></div></div>` + html;
+  let html = active.map(a => `<div class="alert crit"><div class="badge">${ic(a.icon)}</div><div><b>${a.title}</b><span>${a.desc(d)}</span></div></div>`).join("");
+  if (on) html += `<div class="alert info"><div class="badge">${ic("fan")}</div><div><b>พัดลมทำงานอัตโนมัติ</b><span>ระบายอากาศเพื่อลดอุณหภูมิและ CO₂</span></div></div>`;
+  if (!active.length) html = `<div class="alert good"><div class="badge">${ic("circle-check")}</div><div><b>สภาพห้องเรียนปกติ</b><span>ทุกค่าอยู่ในเกณฑ์ที่เหมาะสม</span></div></div>` + html;
   $("alerts").innerHTML = html;
-  $("summary").textContent = active.length ? `⚠️ มี ${active.length} รายการต้องดูแล` : "✅ สภาพห้องเหมาะกับการเรียน";
+  $("summary").innerHTML = active.length ? `${ic("triangle-alert")} มี ${active.length} รายการต้องดูแล` : `${ic("circle-check")} สภาพห้องเหมาะกับการเรียน`;
 
   if (d.device) $("room").textContent = d.device;
   $("updated").textContent = d.time ? d.time.slice(11) : fmtTime(d.ts);
   const aq = typeof d.air_quality === "number" ? d.air_quality : 0;
   $("ringVal").textContent = typeof d.air_quality === "number" ? aq : "–";
   $("ringArc").style.strokeDashoffset = 351.86 * (1 - aq / 100);
+  drawIcons();
 }
 
 // ---------- Charts (หนึ่งค่าต่อหนึ่งกราฟ แกนเดียว + เส้นเกณฑ์) ----------
@@ -383,7 +393,7 @@ const crosshair = {
 $("charts").innerHTML = CHARTS.map(k => {
   const m = METRICS.find(x => x.key === k);
   return `<div class="card chart-card" style="--accent: var(${m.color})">
-    <header><span class="dot"></span><b>${m.icon} ${m.name} (${m.unit})</b><span class="stat" id="s-${k}"></span></header>
+    <header><span class="dot">${ic(m.icon)}</span><b>${m.name} (${m.unit})</b><span class="stat" id="s-${k}"></span></header>
     <div class="chart-box"><canvas id="ch-${k}" aria-label="กราฟ${m.name}"></canvas></div></div>`;
 }).join("");
 
@@ -432,6 +442,7 @@ function restyleCharts() {
   }
 }
 restyleCharts();
+setThemeIcon();
 
 function renderHistory(list) {
   const labels = list.map(timeOf);
