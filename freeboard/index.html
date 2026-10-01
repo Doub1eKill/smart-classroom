@@ -167,6 +167,17 @@
   .fan-chip { display: inline-block; min-width: 42px; text-align: center; padding: 1px 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; }
   .fan-chip.on { background: var(--good-bg); color: var(--good-ink); }
   .fan-chip.off { background: var(--surface-2); color: var(--muted); }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+           padding: 12px 14px; border-top: 1px solid var(--border); font-size: .82rem; color: var(--muted); }
+  .pager .pages { display: flex; align-items: center; gap: 4px; }
+  .pager button { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border);
+                  background: var(--surface); color: var(--ink-2); font: inherit; font-size: .82rem; cursor: pointer;
+                  display: inline-grid; place-items: center; font-variant-numeric: tabular-nums; }
+  .pager button:hover:not(:disabled):not(.active) { background: var(--surface-2); color: var(--ink); }
+  .pager button.active { background: var(--hero-a); border-color: var(--hero-a); color: #fff; font-weight: 600; }
+  .pager button:disabled { opacity: .4; cursor: default; }
+  .pager .gap { padding: 0 4px; }
+  .pager .lucide { width: 16px; height: 16px; }
 
   footer { color: var(--muted); font-size: .8rem; text-align: center; padding: 32px 16px 40px; }
 
@@ -181,6 +192,8 @@
     .tile .value { font-size: 1.6rem; }
     .chip .txt { display: none; }
     .charts { grid-template-columns: 1fr; }
+    .pager { justify-content: center; }
+    .pager .num.far { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -241,7 +254,7 @@
   </section>
 
   <section>
-    <div class="section-head"><h2>ประวัติข้อมูล</h2><p>12 รายการล่าสุดจาก <code>history</code> · ▲ = เกินเกณฑ์</p></div>
+    <div class="section-head"><h2>ประวัติข้อมูล</h2><p>เรียงจากล่าสุด · หน้าละ 10 รายการ · ▲ = เกินเกณฑ์</p></div>
     <div class="card table-card">
       <div class="table-wrap">
         <table>
@@ -249,6 +262,7 @@
           <tbody id="rows"><tr><td colspan="9" style="text-align:center;color:var(--muted)">รอข้อมูล…</td></tr></tbody>
         </table>
       </div>
+      <nav class="pager" id="pager" aria-label="เลือกหน้าประวัติข้อมูล"></nav>
     </div>
   </section>
 </main>
@@ -452,15 +466,55 @@ function renderHistory(list) {
     const nums = vals.filter(v => typeof v === "number");
     $("s-" + k).textContent = nums.length ? `ต่ำสุด ${Math.min(...nums).toFixed(m.dp)} · สูงสุด ${Math.max(...nums).toFixed(m.dp)}` : "";
   }
+}
+
+// ---------- ตารางประวัติ (แบ่งหน้า) ----------
+const PAGE_SIZE = 10, TABLE_MAX = 300;   // เก็บไว้แสดง 300 รายการล่าสุด (~50 นาที) = 30 หน้า
+let tableRows = [], page = 1;
+
+function setTableData(list) {
+  tableRows = list.slice().reverse();   // ล่าสุดก่อน
+  renderTable();
+}
+
+function renderTable() {
+  const pages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
+  page = Math.min(Math.max(1, page), pages);
+  const start = (page - 1) * PAGE_SIZE, rows = tableRows.slice(start, start + PAGE_SIZE);
   const cell = (r, k) => {
     const m = METRICS.find(x => x.key === k), v = r[k];
     return `<td class="${level(m, v) === "crit" ? "breach" : ""}">${typeof v === "number" ? v.toFixed(m.dp) : "–"}</td>`;
   };
-  $("rows").innerHTML = list.slice(-12).reverse().map(r => `<tr><td>${timeOf(r)}</td>
+  $("rows").innerHTML = rows.map(r => `<tr><td title="${r.time || new Date(r.ts).toLocaleString("th-TH")}">${timeOf(r)}</td>
     ${["temperature", "humidity", "light", "co2", "noise", "people", "air_quality"].map(k => cell(r, k)).join("")}
     <td><span class="fan-chip ${r.fan_status === "ON" ? "on" : "off"}">${r.fan_status || "–"}</span></td></tr>`).join("")
     || `<tr><td colspan="9" style="text-align:center;color:var(--muted)">ยังไม่มีข้อมูล</td></tr>`;
+
+  if (!tableRows.length) { $("pager").innerHTML = ""; return; }
+  // ปุ่มเลขหน้า: หน้าแรก, หน้าสุดท้าย และหน้ารอบ ๆ หน้าปัจจุบัน
+  const nums = [...new Set([1, page - 2, page - 1, page, page + 1, page + 2, pages])].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+  let btns = "", prev = 0;
+  for (const n of nums) {
+    if (n - prev > 1) btns += `<span class="gap">…</span>`;
+    btns += `<button class="num ${n === page ? "active" : ""} ${Math.abs(n - page) > 1 && n !== 1 && n !== pages ? "far" : ""}" data-p="${n}" ${n === page ? 'aria-current="page"' : ""}>${n}</button>`;
+    prev = n;
+  }
+  $("pager").innerHTML = `
+    <span>แสดง ${start + 1}–${start + rows.length} จาก ${tableRows.length} รายการ</span>
+    <div class="pages">
+      <button data-p="1" ${page === 1 ? "disabled" : ""} title="หน้าแรก" aria-label="หน้าแรก">${ic("chevrons-left")}</button>
+      <button data-p="${page - 1}" ${page === 1 ? "disabled" : ""} title="ก่อนหน้า" aria-label="ก่อนหน้า">${ic("chevron-left")}</button>
+      ${btns}
+      <button data-p="${page + 1}" ${page === pages ? "disabled" : ""} title="ถัดไป" aria-label="ถัดไป">${ic("chevron-right")}</button>
+      <button data-p="${pages}" ${page === pages ? "disabled" : ""} title="หน้าสุดท้าย" aria-label="หน้าสุดท้าย">${ic("chevrons-right")}</button>
+    </div>`;
+  drawIcons();
 }
+
+$("pager").onclick = e => {
+  const b = e.target.closest("button[data-p]"); if (!b || b.disabled) return;
+  page = +b.dataset.p; renderTable();
+};
 
 function setConn(state, text) { $("pulse").className = "pulse " + state; $("conn").textContent = text; }
 
@@ -490,6 +544,9 @@ if (DEMO) {
     });
   };
   subscribe();
+  onValue(query(ref(db, "history"), limitToLast(TABLE_MAX)), s => {
+    const list = []; s.forEach(c => { list.push(c.val()); }); setTableData(list);
+  });
 }
 
 // โหมดสาธิต: ใช้ตรรกะเดียวกับ ESPHome
@@ -509,11 +566,11 @@ function startDemo() {
       air_quality: Math.round(clamp(100 - (co2 - 400) / 15, 0, 100)), fan_status: s.fan ? "ON" : "OFF",
       device: "ST806", ts };
   };
-  for (let i = 180; i > 0; i--) history.push(step(Date.now() - i * 10000));
+  for (let i = TABLE_MAX; i > 0; i--) history.push(step(Date.now() - i * 10000));
   subscribe = () => { renderHistory(history.slice(-points)); };
   const tick = () => {
-    const d = step(Date.now()); history.push(d); if (history.length > 180) history.shift();
-    renderLatest(d); subscribe();
+    const d = step(Date.now()); history.push(d); if (history.length > TABLE_MAX) history.shift();
+    renderLatest(d); subscribe(); setTableData(history);
   };
   tick(); setInterval(tick, 2000);
 }
