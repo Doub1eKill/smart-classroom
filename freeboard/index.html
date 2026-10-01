@@ -3,198 +3,464 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Smart Classroom Monitoring</title>
+<title>Smart Classroom · ST806</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏫</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0f172a; --panel: #1e293b; --line: #334155; --text: #e2e8f0; --muted: #94a3b8;
-    --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444; --accent: #38bdf8;
+    color-scheme: light;
+    --page: #f4f5f2; --surface: #fcfcfb; --surface-2: #f0efec;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.08);
+    --shadow: 0 1px 2px rgba(11,11,11,.04), 0 8px 24px rgba(11,11,11,.06);
+    --hero-a: #1c5cab; --hero-b: #4a3aa7;
+    --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #8a5a00; --crit: #d03b3b; --crit-ink: #b42323;
+    --good-bg: rgba(12,163,12,.10); --warn-bg: rgba(250,178,25,.16); --crit-bg: rgba(208,59,59,.10);
+    --c-temp: #eb6834; --c-hum: #2a78d6; --c-light: #eda100; --c-co2: #4a3aa7;
+    --c-noise: #e87ba4; --c-people: #1baf7a; --c-aq: #008300;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.08);
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+      --hero-a: #184f95; --hero-b: #3a2d8c;
+      --good-ink: #0ca30c; --warn-ink: #fab219; --crit-ink: #e66767;
+      --good-bg: rgba(12,163,12,.16); --warn-bg: rgba(250,178,25,.14); --crit-bg: rgba(208,59,59,.18);
+      --c-temp: #d95926; --c-hum: #3987e5; --c-light: #c98500; --c-co2: #9085e9;
+      --c-noise: #d55181; --c-people: #199e70; --c-aq: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.08);
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+    --hero-a: #184f95; --hero-b: #3a2d8c;
+    --good-ink: #0ca30c; --warn-ink: #fab219; --crit-ink: #e66767;
+    --good-bg: rgba(12,163,12,.16); --warn-bg: rgba(250,178,25,.14); --crit-bg: rgba(208,59,59,.18);
+    --c-temp: #d95926; --c-hum: #3987e5; --c-light: #c98500; --c-co2: #9085e9;
+    --c-noise: #d55181; --c-people: #199e70; --c-aq: #0ca30c;
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Sarabun', system-ui, sans-serif; }
-  header { padding: 18px 24px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-  header h1 { margin: 0; font-size: 1.4rem; }
-  header small { color: var(--muted); display: block; }
-  .status { display: flex; gap: 8px; align-items: center; font-size: .9rem; color: var(--muted); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
-  .dot.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-  .dot.off { background: var(--bad); }
-  main { padding: 20px 24px; max-width: 1400px; margin: auto; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-  .card .label { color: var(--muted); font-size: .85rem; }
-  .card .value { font-size: 1.9rem; font-weight: 700; margin-top: 4px; }
-  .card .unit { font-size: .9rem; color: var(--muted); font-weight: 400; margin-left: 4px; }
-  .card.warn { border-color: var(--bad); }
-  .card.warn .value { color: #fca5a5; }
-  .fan-on { color: var(--ok); }
-  .fan-off { color: var(--muted); }
-  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.5; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Top bar ---------- */
+  .topbar { position: sticky; top: 0; z-index: 10; background: var(--page); border-bottom: 1px solid var(--border); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+                 background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; font-size: 1.1rem; }
+  .brand small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; line-height: 1.2; }
+  .spacer { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px;
+          background: var(--surface); border: 1px solid var(--border); font-size: .82rem; color: var(--ink-2); white-space: nowrap; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pulse.live { background: var(--good); box-shadow: 0 0 0 0 rgba(12,163,12,.6); animation: pulse 2s infinite; }
+  .pulse.off { background: var(--crit); }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(12,163,12,0); } 100% { box-shadow: 0 0 0 0 rgba(12,163,12,0); } }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+              color: var(--ink); cursor: pointer; font-size: 1rem; }
+  .icon-btn:hover { background: var(--surface-2); }
+
+  /* ---------- Hero ---------- */
+  .hero { margin-top: 24px; border-radius: 20px; padding: 28px; color: #fff; position: relative; overflow: hidden;
+          background: linear-gradient(120deg, var(--hero-a), var(--hero-b)); display: grid;
+          grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+  .hero::after { content: ""; position: absolute; right: -80px; top: -80px; width: 320px; height: 320px; border-radius: 50%;
+                 background: radial-gradient(circle, rgba(255,255,255,.14), transparent 70%); pointer-events: none; }
+  .hero .eyebrow { opacity: .8; font-size: .85rem; letter-spacing: .02em; }
+  .hero h1 { margin: 2px 0 6px; font-size: clamp(1.6rem, 4vw, 2.3rem); line-height: 1.2; }
+  .hero .summary { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+                   background: rgba(255,255,255,.16); font-weight: 600; margin-top: 6px; }
+  .hero .meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 18px; font-size: .88rem; opacity: .9; }
+  .ring { position: relative; width: 132px; height: 132px; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .center b { font-size: 2rem; line-height: 1; display: block; }
+  .ring .center span { font-size: .75rem; opacity: .85; }
+
+  /* ---------- Section ---------- */
+  section { margin-top: 28px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .section-head h2 { margin: 0; font-size: 1.05rem; }
+  .section-head p { margin: 0; color: var(--muted); font-size: .82rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+
+  /* ---------- KPI tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .tile { padding: 16px 18px 18px; position: relative; transition: transform .15s; }
+  .tile:hover { transform: translateY(-2px); }
+  .tile .top { display: flex; align-items: center; gap: 10px; }
+  .tile .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 1.1rem;
+               background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .tile .name { color: var(--ink-2); font-size: .88rem; font-weight: 500; }
+  .tile .value { margin-top: 12px; font-size: 2.1rem; font-weight: 700; line-height: 1; letter-spacing: -.01em; }
+  .tile .unit { font-size: .9rem; color: var(--muted); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+  .chip { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; font-weight: 600;
+          padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .chip.good { background: var(--good-bg); color: var(--good-ink); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .chip.crit { background: var(--crit-bg); color: var(--crit-ink); }
+  .gauge { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); margin-top: 14px; }
+  .gauge .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); transition: width .6s ease; }
+  .gauge .tick { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--crit); border-radius: 1px; }
+  .gauge-scale { display: flex; justify-content: space-between; font-size: .7rem; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile.crit { border-color: color-mix(in srgb, var(--crit) 45%, transparent); }
+
+  .fan .blade { display: inline-block; font-size: 2.1rem; line-height: 1; }
+  .fan.on .blade { animation: spin .9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  h2 { font-size: 1.05rem; margin: 26px 0 10px; color: var(--muted); font-weight: 600; }
-  #alerts { display: flex; flex-wrap: wrap; gap: 10px; }
-  .alert { padding: 10px 14px; border-radius: 10px; background: rgba(239,68,68,.15); border: 1px solid var(--bad); }
-  .alert.ok { background: rgba(34,197,94,.12); border-color: var(--ok); }
-  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
-  .charts .card { height: 260px; }
+  .fan .value { display: flex; align-items: center; gap: 12px; }
+  .fan .reason { margin-top: 14px; font-size: .8rem; color: var(--ink-2); min-height: 2.4em; }
+
+  /* ---------- Alerts ---------- */
+  .alerts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px;
+           border: 1px solid var(--border); background: var(--surface); }
+  .alert .badge { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; font-size: 1.05rem; }
+  .alert.crit .badge { background: var(--crit-bg); }
+  .alert.good .badge { background: var(--good-bg); }
+  .alert.info .badge { background: color-mix(in srgb, var(--c-hum) 14%, transparent); }
+  .alert b { display: block; font-size: .92rem; }
+  .alert span { font-size: .8rem; color: var(--ink-2); }
+
+  /* ---------- Charts ---------- */
+  .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+  .seg button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: .8rem; padding: 4px 12px; border-radius: 7px; cursor: pointer; }
+  .seg button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  .charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .chart-card { padding: 16px 16px 10px; }
+  .chart-card header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .chart-card header .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); align-self: center; }
+  .chart-card header b { font-size: .92rem; }
+  .chart-card header .stat { margin-left: auto; font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chart-box { height: 170px; position: relative; }
+
+  /* ---------- Table ---------- */
+  .table-card { overflow: hidden; }
   .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 14px; text-align: right; white-space: nowrap; }
+  th { font-weight: 600; color: var(--muted); font-size: .76rem; background: var(--surface-2); position: sticky; top: 0; }
   th:first-child, td:first-child { text-align: left; }
-  th { color: var(--muted); font-weight: 600; }
-  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 20px; }
-  @media (max-width: 600px) { header, main { padding-left: 16px; padding-right: 16px; } .card .value { font-size: 1.5rem; } }
+  tbody tr { border-top: 1px solid var(--border); }
+  tbody tr:hover { background: var(--surface-2); }
+  td.breach { font-weight: 700; }
+  td.breach::before { content: "▲ "; color: var(--crit); font-size: .7em; }
+  .fan-chip { display: inline-block; min-width: 42px; text-align: center; padding: 1px 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; }
+  .fan-chip.on { background: var(--good-bg); color: var(--good-ink); }
+  .fan-chip.off { background: var(--surface-2); color: var(--muted); }
+
+  footer { color: var(--muted); font-size: .8rem; text-align: center; padding: 32px 16px 40px; }
+
+  @media (max-width: 1024px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .brand small, .pill .when { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 22px; }
+    .ring { justify-self: start; }
+    .tiles { gap: 10px; }
+    .tile { padding: 14px; }
+    .tile .value { font-size: 1.6rem; }
+    .chip .txt { display: none; }
+    .charts { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>🏫 Smart Classroom Monitoring System · <span id="room">ST806</span></h1>
-    <small>ESP32 + ESPHome → Firebase RTDB (iot-118) → GitHub Pages</small>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><div class="logo">🏫</div><div>Smart Classroom<small>Monitoring System · iot-118</small></div></div>
+    <div class="spacer"></div>
+    <span class="pill"><span id="pulse" class="pulse"></span><span id="conn">กำลังเชื่อมต่อ…</span></span>
+    <button class="icon-btn" id="themeBtn" title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่าง/มืด">🌓</button>
   </div>
-  <div class="status"><span id="dot" class="dot"></span><span id="conn">กำลังเชื่อมต่อ...</span> · <span id="updated">-</span></div>
-</header>
+</div>
 
-<main>
-  <div class="grid" id="cards"></div>
-
-  <h2>การแจ้งเตือน (Alert)</h2>
-  <div id="alerts"><div class="alert ok">รอข้อมูล...</div></div>
-
-  <h2>กราฟย้อนหลัง</h2>
-  <div class="charts">
-    <div class="card"><canvas id="chTemp"></canvas></div>
-    <div class="card"><canvas id="chAir"></canvas></div>
-    <div class="card"><canvas id="chLight"></canvas></div>
-    <div class="card"><canvas id="chPeople"></canvas></div>
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">ห้องเรียน</div>
+      <h1 id="room">ST806</h1>
+      <div class="summary" id="summary">⏳ รอข้อมูลจากเซ็นเซอร์</div>
+      <div class="meta">
+        <span>🕒 อัปเดตล่าสุด <b id="updated">–</b></span>
+        <span>📡 ESP32 + ESPHome → Firebase</span>
+        <span>🔁 ส่งข้อมูลทุก 10 วินาที</span>
+      </div>
+    </div>
+    <div class="ring" title="คุณภาพอากาศ">
+      <svg width="132" height="132" viewBox="0 0 132 132">
+        <circle cx="66" cy="66" r="56" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="12"/>
+        <circle id="ringArc" cx="66" cy="66" r="56" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"
+                stroke-dasharray="351.86" stroke-dashoffset="351.86" style="transition: stroke-dashoffset .8s ease"/>
+      </svg>
+      <div class="center"><div><b id="ringVal">–</b><span>คุณภาพอากาศ %</span></div></div>
+    </div>
   </div>
 
-  <h2>ประวัติข้อมูลล่าสุด (history)</h2>
-  <div class="card table-wrap">
-    <table>
-      <thead><tr><th>เวลา</th><th>Temp °C</th><th>Hum %</th><th>Light lux</th><th>CO₂ ppm</th><th>Noise dB</th><th>People</th><th>Air %</th><th>Fan</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
+  <section>
+    <div class="section-head"><h2>ค่าปัจจุบัน</h2><p>เส้นแดงบนแถบ = เกณฑ์แจ้งเตือน</p></div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>การแจ้งเตือน</h2><p>ประมวลผลบน ESP32 และแสดงซ้ำบน Dashboard</p></div>
+    <div class="alerts" id="alerts"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>แนวโน้มย้อนหลัง</h2>
+      <div class="seg" id="range">
+        <button data-n="30" class="active">30 จุด · 5 นาที</button>
+        <button data-n="60">60 จุด · 10 นาที</button>
+        <button data-n="180">180 จุด · 30 นาที</button>
+      </div>
+    </div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>ประวัติข้อมูล</h2><p>12 รายการล่าสุดจาก <code>history</code> · ▲ = เกินเกณฑ์</p></div>
+    <div class="card table-card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>เวลา</th><th>อุณหภูมิ °C</th><th>ความชื้น %</th><th>แสง lux</th><th>CO₂ ppm</th><th>เสียง dB</th><th>คน</th><th>อากาศ %</th><th>พัดลม</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="9" style="text-align:center;color:var(--muted)">รอข้อมูล…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </main>
-<footer>Smart Classroom Monitoring System · ห้อง ST806 · iot-118</footer>
+
+<footer>Smart Classroom Monitoring System · ห้อง ST806 · ESP32 · ESPHome · Firebase Realtime Database (iot-118) · GitHub Pages</footer>
 
 <script type="module">
 // ================== CONFIG ==================
-// ใส่ค่าจาก Firebase Console > Project settings > General > Your apps (Web app)
-// สำหรับ Realtime Database ที่เปิด read แบบ public ใช้แค่ databaseURL ก็พอ
 const firebaseConfig = {
   databaseURL: "https://iot-118-default-rtdb.asia-southeast1.firebasedatabase.app",
 };
-const HISTORY_POINTS = 30;
-const LIMIT = { co2: 1000, temp: 30, people: 40, light: 200 };
 // เปิด  .../freeboard/?demo  เพื่อดูหน้าจอด้วยข้อมูลจำลองโดยไม่ต้องต่อ Firebase
 const DEMO = new URLSearchParams(location.search).has("demo");
 // ============================================
 
-const FIELDS = [
-  { key: "temperature", label: "🌡️ Temperature", unit: "°C", dp: 1, warn: v => v > LIMIT.temp },
-  { key: "humidity",    label: "💧 Humidity",    unit: "%",  dp: 1 },
-  { key: "light",       label: "💡 Light",       unit: "lux", dp: 0, warn: v => v < LIMIT.light },
-  { key: "co2",         label: "🫧 CO₂",         unit: "ppm", dp: 0, warn: v => v > LIMIT.co2 },
-  { key: "noise",       label: "🔊 Noise",       unit: "dB", dp: 0 },
-  { key: "people",      label: "👥 People",      unit: "คน", dp: 0, warn: v => v > LIMIT.people },
-  { key: "air_quality", label: "🍃 Air Quality", unit: "%",  dp: 0, warn: v => v < 60 },
-  { key: "fan_status",  label: "🌀 Fan Status",  unit: "",   fan: true },
+// เมตริก: min/max = ช่วงของแถบ, warn/crit = เกณฑ์ (dir "hi" = สูงเกินไม่ดี, "lo" = ต่ำเกินไม่ดี)
+const METRICS = [
+  { key: "temperature", name: "อุณหภูมิ",     icon: "🌡️", unit: "°C",  dp: 1, min: 20,  max: 36,   dir: "hi", warn: 28,  crit: 30,   color: "--c-temp" },
+  { key: "humidity",    name: "ความชื้น",     icon: "💧", unit: "%",   dp: 1, min: 0,   max: 100,  dir: "hi", warn: 70,  crit: null, color: "--c-hum" },
+  { key: "light",       name: "แสงสว่าง",     icon: "💡", unit: "lux", dp: 0, min: 0,   max: 1000, dir: "lo", warn: 300, crit: 200,  color: "--c-light" },
+  { key: "co2",         name: "CO₂",          icon: "🫧", unit: "ppm", dp: 0, min: 400, max: 2000, dir: "hi", warn: 800, crit: 1000, color: "--c-co2" },
+  { key: "noise",       name: "ระดับเสียง",   icon: "🔊", unit: "dB",  dp: 0, min: 30,  max: 90,   dir: "hi", warn: 60,  crit: null, color: "--c-noise" },
+  { key: "people",      name: "จำนวนคน",      icon: "👥", unit: "คน",  dp: 0, min: 0,   max: 50,   dir: "hi", warn: 35,  crit: 40,   color: "--c-people" },
+  { key: "air_quality", name: "คุณภาพอากาศ",  icon: "🍃", unit: "%",   dp: 0, min: 0,   max: 100,  dir: "lo", warn: 70,  crit: 50,   color: "--c-aq" },
 ];
-
 const ALERTS = [
-  { test: d => d.co2 > LIMIT.co2,           text: "⚠️ คุณภาพอากาศไม่ดี (CO₂ > 1000 ppm)" },
-  { test: d => d.temperature > LIMIT.temp,  text: "🔥 อุณหภูมิสูง (> 30 °C)" },
-  { test: d => d.people > LIMIT.people,     text: "⚠️ ห้องมีคนหนาแน่น (> 40 คน)" },
-  { test: d => d.light < LIMIT.light,       text: "💡 แสงสว่างไม่เพียงพอ (< 200 lux)" },
+  { test: d => d.co2 > 1000,        icon: "⚠️", title: "คุณภาพอากาศไม่ดี",   desc: d => `CO₂ ${d.co2} ppm (เกิน 1000)` },
+  { test: d => d.temperature > 30,  icon: "🔥", title: "อุณหภูมิสูง",         desc: d => `${d.temperature} °C (เกิน 30)` },
+  { test: d => d.people > 40,       icon: "⚠️", title: "ห้องมีคนหนาแน่น",     desc: d => `${d.people} คน (เกิน 40)` },
+  { test: d => d.light < 200,       icon: "💡", title: "แสงสว่างไม่เพียงพอ", desc: d => `${d.light} lux (ต่ำกว่า 200)` },
 ];
+const CHARTS = ["temperature", "co2", "humidity", "light", "noise", "people"];
 
 const $ = id => document.getElementById(id);
-$("cards").innerHTML = FIELDS.map(f =>
-  `<div class="card" id="card-${f.key}"><div class="label">${f.label}</div>
-   <div class="value"><span id="v-${f.key}">-</span><span class="unit">${f.unit}</span></div></div>`).join("");
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString("th-TH", { hour12: false }) : "–";
+const timeOf = r => r.time ? r.time.slice(11) : fmtTime(r.ts);
 
-function setConn(state, text) {
-  $("dot").className = "dot " + state;
-  $("conn").textContent = text;
+function level(m, v) {
+  if (typeof v !== "number") return null;
+  const over = (t) => t != null && (m.dir === "hi" ? v > t : v < t);
+  return over(m.crit) ? "crit" : over(m.warn) ? "warn" : "good";
 }
+const CHIP = { good: ["✓", "ปกติ"], warn: ["!", "ควรระวัง"], crit: ["▲", "เกินเกณฑ์"] };
+
+// ---------- Theme ----------
+const root = document.documentElement;
+try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch {}
+$("themeBtn").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+  restyleCharts();
+};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => restyleCharts());
+
+// ---------- Tiles ----------
+$("tiles").innerHTML = METRICS.map(m => {
+  const pos = t => ((t - m.min) / (m.max - m.min) * 100).toFixed(1);
+  return `<div class="card tile" id="t-${m.key}" style="--accent: var(${m.color})">
+    <div class="top"><div class="ico">${m.icon}</div><div class="name">${m.name}</div><span class="chip" id="c-${m.key}"></span></div>
+    <div class="value"><span id="v-${m.key}">–</span><span class="unit">${m.unit}</span></div>
+    <div class="gauge"><div class="fill" id="g-${m.key}" style="width:0"></div>
+      ${m.crit != null ? `<div class="tick" style="left:${pos(m.crit)}%" title="เกณฑ์ ${m.crit}"></div>` : ""}</div>
+    <div class="gauge-scale"><span>${m.min}</span><span>${m.max}</span></div>
+  </div>`;
+}).join("") + `
+  <div class="card tile fan" id="t-fan" style="--accent: var(--c-hum)">
+    <div class="top"><div class="ico">🌀</div><div class="name">พัดลมระบายอากาศ</div><span class="chip" id="c-fan"></span></div>
+    <div class="value"><span class="blade">🌀</span><span id="v-fan">–</span></div>
+    <div class="reason" id="fanReason">เปิดอัตโนมัติเมื่ออุณหภูมิ &gt; 30 °C หรือ CO₂ &gt; 1000 ppm</div>
+  </div>`;
 
 function renderLatest(d) {
   if (!d) return;
-  for (const f of FIELDS) {
-    const el = $("v-" + f.key), card = $("card-" + f.key), v = d[f.key];
-    if (f.fan) {
-      const on = v === "ON";
-      el.innerHTML = on ? `<span class="spin">🌀</span> ON` : "OFF";
-      el.className = on ? "fan-on" : "fan-off";
-      continue;
-    }
-    el.textContent = typeof v === "number" ? v.toFixed(f.dp) : "-";
-    card.classList.toggle("warn", typeof v === "number" && !!f.warn?.(v));
+  for (const m of METRICS) {
+    const v = d[m.key], lv = level(m, v);
+    $("v-" + m.key).textContent = typeof v === "number" ? v.toFixed(m.dp) : "–";
+    $("g-" + m.key).style.width = typeof v === "number" ? Math.max(0, Math.min(100, (v - m.min) / (m.max - m.min) * 100)) + "%" : "0";
+    const chip = $("c-" + m.key);
+    chip.className = "chip " + (lv || "");
+    chip.innerHTML = lv ? `${CHIP[lv][0]} <span class="txt">${CHIP[lv][1]}</span>` : "";
+    $("t-" + m.key).classList.toggle("crit", lv === "crit");
   }
+  // Fan
+  const on = d.fan_status === "ON";
+  $("t-fan").classList.toggle("on", on);
+  $("v-fan").textContent = on ? "ON" : "OFF";
+  $("c-fan").className = "chip " + (on ? "good" : "");
+  $("c-fan").innerHTML = on ? `● <span class="txt">ทำงาน</span>` : `○ <span class="txt">ปิด</span>`;
+  const why = [d.temperature > 30 && "อุณหภูมิสูง", d.co2 > 1000 && "CO₂ สูง"].filter(Boolean);
+  $("fanReason").textContent = on ? `เปิดอัตโนมัติ เพราะ${why.join(" และ ") || "เงื่อนไขจากบอร์ด"}` : "เปิดอัตโนมัติเมื่ออุณหภูมิ > 30 °C หรือ CO₂ > 1000 ppm";
+
+  // Alerts + hero
   const active = ALERTS.filter(a => a.test(d));
-  if (d.fan_status === "ON") active.push({ text: "🌀 พัดลมทำงานอัตโนมัติ (อุณหภูมิสูง หรือ CO₂ สูง)" });
-  $("alerts").innerHTML = active.length
-    ? active.map(a => `<div class="alert">${a.text}</div>`).join("")
-    : `<div class="alert ok">✅ สภาพห้องเรียนปกติ</div>`;
+  let html = active.map(a => `<div class="alert crit"><div class="badge">${a.icon}</div><div><b>${a.title}</b><span>${a.desc(d)}</span></div></div>`).join("");
+  if (on) html += `<div class="alert info"><div class="badge">🌀</div><div><b>พัดลมทำงานอัตโนมัติ</b><span>ระบายอากาศเพื่อลดอุณหภูมิและ CO₂</span></div></div>`;
+  if (!active.length) html = `<div class="alert good"><div class="badge">✅</div><div><b>สภาพห้องเรียนปกติ</b><span>ทุกค่าอยู่ในเกณฑ์ที่เหมาะสม</span></div></div>` + html;
+  $("alerts").innerHTML = html;
+  $("summary").textContent = active.length ? `⚠️ มี ${active.length} รายการต้องดูแล` : "✅ สภาพห้องเหมาะกับการเรียน";
+
   if (d.device) $("room").textContent = d.device;
-  $("updated").textContent = "อัปเดต " + (d.time || fmtTime(d.ts));
+  $("updated").textContent = d.time ? d.time.slice(11) : fmtTime(d.ts);
+  const aq = typeof d.air_quality === "number" ? d.air_quality : 0;
+  $("ringVal").textContent = typeof d.air_quality === "number" ? aq : "–";
+  $("ringArc").style.strokeDashoffset = 351.86 * (1 - aq / 100);
 }
 
-const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString("th-TH") : "-";
-const label = r => r.time ? r.time.slice(11) : fmtTime(r.ts);
+// ---------- Charts (หนึ่งค่าต่อหนึ่งกราฟ แกนเดียว + เส้นเกณฑ์) ----------
+Chart.defaults.font.family = "'IBM Plex Sans Thai', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+const thresholdLine = {
+  id: "threshold",
+  afterDatasetsDraw(chart, _a, opts) {
+    if (opts.value == null) return;
+    const { ctx, chartArea: a, scales: { y } } = chart;
+    const py = y.getPixelForValue(opts.value);
+    if (py < a.top || py > a.bottom) return;
+    ctx.save();
+    ctx.strokeStyle = opts.color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(a.left, py); ctx.lineTo(a.right, py); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = opts.color; ctx.font = "600 10px 'IBM Plex Sans Thai', sans-serif";
+    ctx.textAlign = "right"; ctx.fillText("เกณฑ์ " + opts.value, a.right - 4, py - 14 < a.top ? py + 13 : py - 5);
+    ctx.restore();
+  },
+};
+const crosshair = {
+  id: "crosshair",
+  afterDraw(chart) {
+    const act = chart.tooltip?.getActiveElements?.();
+    if (!act?.length) return;
+    const { ctx, chartArea: a } = chart, x = act[0].element.x;
+    ctx.save(); ctx.strokeStyle = css("--axis"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, a.top); ctx.lineTo(x, a.bottom); ctx.stroke(); ctx.restore();
+  },
+};
 
-// ---------- Charts ----------
-Chart.defaults.color = "#94a3b8";
-Chart.defaults.borderColor = "#334155";
-Chart.defaults.font.family = "Sarabun, sans-serif";
-function lineChart(id, title, series) {
-  return new Chart($(id), {
+$("charts").innerHTML = CHARTS.map(k => {
+  const m = METRICS.find(x => x.key === k);
+  return `<div class="card chart-card" style="--accent: var(${m.color})">
+    <header><span class="dot"></span><b>${m.icon} ${m.name} (${m.unit})</b><span class="stat" id="s-${k}"></span></header>
+    <div class="chart-box"><canvas id="ch-${k}" aria-label="กราฟ${m.name}"></canvas></div></div>`;
+}).join("");
+
+const charts = CHARTS.map(k => {
+  const m = METRICS.find(x => x.key === k);
+  const chart = new Chart($("ch-" + k), {
     type: "line",
-    data: { labels: [], datasets: series.map(s => ({
-      label: s.label, data: [], borderColor: s.color, backgroundColor: s.color + "33",
-      yAxisID: s.axis || "y", tension: .35, pointRadius: 0, borderWidth: 2, fill: !!s.fill })) },
+    data: { labels: [], datasets: [{ label: m.name, data: [], borderWidth: 2, tension: .35, pointRadius: 0,
+      pointHoverRadius: 5, pointHoverBorderWidth: 2, fill: true }] },
     options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
+      responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
       interaction: { mode: "index", intersect: false },
-      plugins: { title: { display: true, text: title } },
-      scales: series.some(s => s.axis === "y1")
-        ? { y: { position: "left" }, y1: { position: "right", grid: { drawOnChartArea: false } } }
-        : {},
+      plugins: {
+        legend: { display: false },
+        threshold: { value: m.crit, color: "#d03b3b" },
+        tooltip: { displayColors: false, padding: 10, cornerRadius: 8,
+          callbacks: { label: c => `${m.name}: ${c.parsed.y.toFixed(m.dp)} ${m.unit}` } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 5, maxRotation: 0 }, border: { display: true } },
+        y: { grace: "10%", ticks: { maxTicksLimit: 5 }, border: { display: false },
+             ...(m.crit != null && (m.dir === "hi" ? { suggestedMax: m.crit * 1.05 } : { suggestedMin: m.crit * .9 })) },
+      },
     },
+    plugins: [thresholdLine, crosshair],
   });
+  return { k, m, chart };
+});
+
+function restyleCharts() {
+  for (const { m, chart } of charts) {
+    const c = css(m.color), ds = chart.data.datasets[0];
+    ds.borderColor = c; ds.pointHoverBackgroundColor = c; ds.pointHoverBorderColor = css("--surface");
+    ds.backgroundColor = (ctx) => {
+      const a = ctx.chart.chartArea; if (!a) return "transparent";
+      const g = ctx.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+      g.addColorStop(0, c + "40"); g.addColorStop(1, c + "00"); return g;
+    };
+    const s = chart.options.scales;
+    s.x.ticks.color = s.y.ticks.color = css("--muted");
+    s.y.grid.color = css("--grid"); s.x.border.color = css("--axis");
+    const tt = chart.options.plugins.tooltip;
+    tt.backgroundColor = css("--surface"); tt.titleColor = css("--ink"); tt.bodyColor = css("--ink-2");
+    tt.borderColor = css("--axis"); tt.borderWidth = 1;
+    chart.update("none");
+  }
 }
-const charts = [
-  { c: lineChart("chTemp", "อุณหภูมิ / ความชื้น", [
-      { label: "Temperature °C", color: "#f97316" },
-      { label: "Humidity %", color: "#38bdf8", axis: "y1" }]), keys: ["temperature", "humidity"] },
-  { c: lineChart("chAir", "CO₂ / คุณภาพอากาศ", [
-      { label: "CO₂ ppm", color: "#ef4444" },
-      { label: "Air Quality %", color: "#22c55e", axis: "y1" }]), keys: ["co2", "air_quality"] },
-  { c: lineChart("chLight", "แสงสว่าง", [
-      { label: "Light lux", color: "#facc15", fill: true }]), keys: ["light"] },
-  { c: lineChart("chPeople", "จำนวนคน / เสียง", [
-      { label: "People", color: "#a78bfa" },
-      { label: "Noise dB", color: "#94a3b8", axis: "y1" }]), keys: ["people", "noise"] },
-];
+restyleCharts();
 
 function renderHistory(list) {
-  const labels = list.map(label);
-  for (const { c, keys } of charts) {
-    c.data.labels = labels;
-    keys.forEach((k, i) => c.data.datasets[i].data = list.map(r => r[k]));
-    c.update();
+  const labels = list.map(timeOf);
+  for (const { k, m, chart } of charts) {
+    const vals = list.map(r => r[k]);
+    chart.data.labels = labels; chart.data.datasets[0].data = vals; chart.update();
+    const nums = vals.filter(v => typeof v === "number");
+    $("s-" + k).textContent = nums.length ? `ต่ำสุด ${Math.min(...nums).toFixed(m.dp)} · สูงสุด ${Math.max(...nums).toFixed(m.dp)}` : "";
   }
-  $("rows").innerHTML = list.slice(-15).reverse().map(r => `<tr>
-    <td>${r.time || fmtTime(r.ts)}</td><td>${r.temperature?.toFixed(1)}</td><td>${r.humidity?.toFixed(1)}</td>
-    <td>${r.light}</td><td>${r.co2}</td><td>${r.noise}</td><td>${r.people}</td><td>${r.air_quality}</td>
-    <td class="${r.fan_status === "ON" ? "fan-on" : "fan-off"}">${r.fan_status}</td></tr>`).join("");
+  const cell = (r, k) => {
+    const m = METRICS.find(x => x.key === k), v = r[k];
+    return `<td class="${level(m, v) === "crit" ? "breach" : ""}">${typeof v === "number" ? v.toFixed(m.dp) : "–"}</td>`;
+  };
+  $("rows").innerHTML = list.slice(-12).reverse().map(r => `<tr><td>${timeOf(r)}</td>
+    ${["temperature", "humidity", "light", "co2", "noise", "people", "air_quality"].map(k => cell(r, k)).join("")}
+    <td><span class="fan-chip ${r.fan_status === "ON" ? "on" : "off"}">${r.fan_status || "–"}</span></td></tr>`).join("")
+    || `<tr><td colspan="9" style="text-align:center;color:var(--muted)">ยังไม่มีข้อมูล</td></tr>`;
 }
 
+function setConn(state, text) { $("pulse").className = "pulse " + state; $("conn").textContent = text; }
+
 // ---------- Data source ----------
+let points = 30, subscribe = () => {};
+$("range").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  for (const x of $("range").children) x.classList.toggle("active", x === b);
+  points = +b.dataset.n; subscribe();
+};
+
 if (DEMO) {
   startDemo();
 } else {
@@ -202,39 +468,41 @@ if (DEMO) {
   const { getDatabase, ref, query, limitToLast, onValue } =
     await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
   const db = getDatabase(initializeApp(firebaseConfig));
-
   onValue(ref(db, ".info/connected"), s =>
-    s.val() ? setConn("live", "Realtime เชื่อมต่อแล้ว") : setConn("off", "ขาดการเชื่อมต่อ"));
-  onValue(ref(db, "latest"), s => renderLatest(s.val()),
-    e => setConn("off", "อ่านข้อมูลไม่ได้: " + e.message));
-  onValue(query(ref(db, "history"), limitToLast(HISTORY_POINTS)), s => {
-    const list = [];
-    s.forEach(child => { list.push(child.val()); });
-    renderHistory(list);
-  });
+    s.val() ? setConn("live", "Realtime") : setConn("off", "ขาดการเชื่อมต่อ"));
+  onValue(ref(db, "latest"), s => renderLatest(s.val()), e => setConn("off", "อ่านข้อมูลไม่ได้"));
+  let unsub = null;
+  subscribe = () => {
+    unsub?.();
+    unsub = onValue(query(ref(db, "history"), limitToLast(points)), s => {
+      const list = []; s.forEach(c => { list.push(c.val()); }); renderHistory(list);
+    });
+  };
+  subscribe();
 }
 
 // โหมดสาธิต: ใช้ตรรกะเดียวกับ ESPHome
 function startDemo() {
-  setConn("live", "โหมดสาธิต (ข้อมูลจำลองในเบราว์เซอร์)");
+  setConn("live", "โหมดสาธิต");
   const rnd = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  let s = { p: 25, t: 28, h: 62, lux: 500, fan: false };
-  const history = [];
-  const tick = () => {
+  const s = { p: 25, t: 28, h: 62, lux: 500, fan: false }, history = [];
+  const step = (ts) => {
     s.p = clamp(s.p + rnd(-3, 3.2), 0, 50); const p = Math.round(s.p);
     s.t = clamp(s.t + rnd(-.35, .35) + (p - 25) * .012 - (s.fan ? .3 : 0), 24, 34);
     s.h = clamp(s.h + rnd(-1.5, 1.5) - (s.fan ? .4 : 0), 40, 85);
     s.lux = clamp(s.lux + rnd(-60, 60), 100, 850);
     const co2 = clamp(420 + p * 16.5 + rnd(-60, 60) - (s.fan ? 150 : 0), 400, 1800);
-    s.fan = s.t > LIMIT.temp || co2 > LIMIT.co2;
-    const d = {
-      temperature: +s.t.toFixed(1), humidity: +s.h.toFixed(1), light: Math.round(s.lux),
-      co2: Math.round(co2), noise: Math.round(clamp(35 + p * .5 + rnd(-4, 8), 30, 90)), people: p,
+    s.fan = s.t > 30 || co2 > 1000;
+    return { temperature: +s.t.toFixed(1), humidity: +s.h.toFixed(1), light: Math.round(s.lux), co2: Math.round(co2),
+      noise: Math.round(clamp(35 + p * .5 + rnd(-4, 8), 30, 90)), people: p,
       air_quality: Math.round(clamp(100 - (co2 - 400) / 15, 0, 100)), fan_status: s.fan ? "ON" : "OFF",
-      ts: Date.now(),
-    };
-    history.push(d); if (history.length > HISTORY_POINTS) history.shift();
-    renderLatest(d); renderHistory(history);
+      device: "ST806", ts };
+  };
+  for (let i = 180; i > 0; i--) history.push(step(Date.now() - i * 10000));
+  subscribe = () => { renderHistory(history.slice(-points)); };
+  const tick = () => {
+    const d = step(Date.now()); history.push(d); if (history.length > 180) history.shift();
+    renderLatest(d); subscribe();
   };
   tick(); setInterval(tick, 2000);
 }
