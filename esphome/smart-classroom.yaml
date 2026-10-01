@@ -1,0 +1,218 @@
+# =============================================================
+#  Smart Classroom Monitoring System
+#  ESP32 + ESPHome  ──►  Firebase Realtime Database (iot-118)
+#
+#  - จำลองค่าเซ็นเซอร์ 8 ค่า (สุ่มแบบ random-walk ให้ค่าต่อเนื่องสมจริง)
+#  - ประมวลผล Alert + คำนวณ fan_status บนบอร์ด (Edge logic)
+#  - PUT  /latest.json   = ค่าปัจจุบัน (เขียนทับ)
+#  - POST /history.json  = ต่อท้ายประวัติ (Firebase สร้าง push-key ให้)
+# =============================================================
+
+substitutions:
+  device_name: smart-classroom
+  friendly_name: Smart Classroom
+  room_id: ST806
+  # URL ของ Realtime Database (ดูได้ที่ Firebase Console > Realtime Database)
+  # ถ้าสร้างฐานข้อมูลที่ us-central1 URL จะเป็น https://iot-118-default-rtdb.firebaseio.com
+  firebase_url: https://iot-118-default-rtdb.asia-southeast1.firebasedatabase.app
+  publish_interval: 10s
+  # เกณฑ์การแจ้งเตือน
+  co2_limit: "1000"
+  temp_limit: "30"
+  people_limit: "40"
+  light_limit: "200"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Smart-Classroom-Fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Asia/Bangkok
+
+http_request:
+  id: http_client
+  verify_ssl: false
+  timeout: 10s
+
+# JSON ที่สร้างในแต่ละรอบ (ใช้ร่วมกันทั้ง latest และ history)
+globals:
+  - id: payload
+    type: std::string
+    restore_value: false
+    initial_value: '"{}"'
+
+# ---------- เซ็นเซอร์จำลอง (ค่าถูก publish จาก interval ด้านล่าง) ----------
+sensor:
+  - platform: template
+    name: "Temperature"
+    id: temperature
+    unit_of_measurement: "°C"
+    device_class: temperature
+    accuracy_decimals: 1
+    update_interval: never
+  - platform: template
+    name: "Humidity"
+    id: humidity
+    unit_of_measurement: "%"
+    device_class: humidity
+    accuracy_decimals: 1
+    update_interval: never
+  - platform: template
+    name: "Light"
+    id: light
+    unit_of_measurement: "lx"
+    device_class: illuminance
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "CO2"
+    id: co2
+    unit_of_measurement: "ppm"
+    device_class: carbon_dioxide
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "Noise"
+    id: noise
+    unit_of_measurement: "dB"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "People"
+    id: people
+    unit_of_measurement: "คน"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "Air Quality"
+    id: air_quality
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: never
+
+text_sensor:
+  - platform: template
+    name: "Alerts"
+    id: alerts_text
+    update_interval: never
+
+# พัดลม (ใช้ LED บนบอร์ด GPIO2 แทน Relay)
+switch:
+  - platform: gpio
+    pin: GPIO2
+    id: fan_relay
+    name: "Fan Status"
+    restore_mode: ALWAYS_OFF
+
+# ---------- วงรอบหลัก: สุ่มค่า → ประมวลผล → ส่ง Firebase ----------
+interval:
+  - interval: ${publish_interval}
+    then:
+      - lambda: |-
+          auto rnd = [](float lo, float hi) { return lo + random_float() * (hi - lo); };
+          auto clampf = [](float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); };
+
+          // สถานะต่อเนื่องระหว่างรอบ (random walk)
+          static float s_people = 25, s_temp = 28.0, s_hum = 62.0, s_lux = 500;
+          bool fan_on = id(fan_relay).state;
+
+          s_people = clampf(s_people + rnd(-3.0, 3.2), 0, 50);
+          int p = (int) roundf(s_people);
+
+          // คนเยอะ = ร้อนขึ้น, พัดลมเปิด = เย็นลง
+          s_temp = clampf(s_temp + rnd(-0.35, 0.35) + (p - 25) * 0.012f - (fan_on ? 0.3f : 0.0f), 24.0, 34.0);
+          s_hum  = clampf(s_hum + rnd(-1.5, 1.5) + (fan_on ? -0.4f : 0.0f), 40.0, 85.0);
+          s_lux  = clampf(s_lux + rnd(-60, 60), 100, 850);
+
+          // CO2 สัมพันธ์กับจำนวนคน พัดลมช่วยระบายอากาศ
+          float c = clampf(420 + p * 16.5f + rnd(-60, 60) - (fan_on ? 150.0f : 0.0f), 400, 1800);
+          float n = clampf(35 + p * 0.5f + rnd(-4, 8), 30, 90);
+          float aq = clampf(100 - (c - 400) / 15.0f, 0, 100);
+
+          id(temperature).publish_state(roundf(s_temp * 10) / 10);
+          id(humidity).publish_state(roundf(s_hum * 10) / 10);
+          id(light).publish_state(roundf(s_lux));
+          id(co2).publish_state(roundf(c));
+          id(noise).publish_state(roundf(n));
+          id(people).publish_state(p);
+          id(air_quality).publish_state(roundf(aq));
+
+          // ----- Edge logic: Alert -----
+          std::string codes, text;
+          auto add = [&](const char *code, const char *msg) {
+            codes += (codes.empty() ? "" : ",");
+            codes += std::string("\"") + code + "\"";
+            text += (text.empty() ? "" : " | ");
+            text += msg;
+          };
+          if (c > ${co2_limit})            add("co2_high",    "คุณภาพอากาศไม่ดี (CO2 สูง)");
+          if (s_temp > ${temp_limit})      add("temp_high",   "อุณหภูมิสูง");
+          if (p > ${people_limit})         add("crowded",     "ห้องมีคนหนาแน่น");
+          if (s_lux < ${light_limit})      add("light_low",   "แสงสว่างไม่เพียงพอ");
+          id(alerts_text).publish_state(text.empty() ? "ปกติ" : text);
+
+          // ----- Edge logic: Fan = ON เมื่ออุณหภูมิสูง หรือ CO2 สูง -----
+          bool want_fan = (s_temp > ${temp_limit}) || (c > ${co2_limit});
+          if (want_fan != fan_on) {
+            if (want_fan) id(fan_relay).turn_on(); else id(fan_relay).turn_off();
+          }
+
+          // ----- สร้าง JSON -----
+          auto now = id(sntp_time).now();
+          std::string ts_text = now.is_valid() ? now.strftime("%Y-%m-%d %H:%M:%S") : "";
+          char buf[512];
+          snprintf(buf, sizeof(buf),
+            "{\"temperature\":%.1f,\"humidity\":%.1f,\"light\":%.0f,\"co2\":%.0f,"
+            "\"noise\":%.0f,\"people\":%d,\"air_quality\":%.0f,\"fan_status\":\"%s\","
+            "\"alerts\":[%s],\"device\":\"${room_id}\",\"time\":\"%s\","
+            "\"ts\":{\".sv\":\"timestamp\"}}",
+            s_temp, s_hum, s_lux, c, n, p, aq, want_fan ? "ON" : "OFF",
+            codes.c_str(), ts_text.c_str());
+          id(payload) = buf;
+          ESP_LOGI("classroom", "%s", buf);
+
+      - http_request.send:
+          method: PUT
+          url: ${firebase_url}/latest.json
+          request_headers:
+            Content-Type: application/json
+          body: !lambda return id(payload);
+          on_response:
+            then:
+              - logger.log:
+                  format: "latest -> HTTP %d"
+                  args: ["response->status_code"]
+
+      - http_request.send:
+          method: POST
+          url: ${firebase_url}/history.json
+          request_headers:
+            Content-Type: application/json
+          body: !lambda return id(payload);
+          on_response:
+            then:
+              - logger.log:
+                  format: "history -> HTTP %d"
+                  args: ["response->status_code"]

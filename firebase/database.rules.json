@@ -1,0 +1,16 @@
+{
+  "rules": {
+    ".read": true,
+    "latest": {
+      ".write": true,
+      ".validate": "newData.hasChildren(['temperature','humidity','light','co2','noise','people','air_quality','fan_status'])"
+    },
+    "history": {
+      ".indexOn": ["ts"],
+      "$id": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['temperature','humidity','light','co2','noise','people','air_quality','fan_status'])"
+      }
+    }
+  }
+}
